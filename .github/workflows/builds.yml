@@ -48,8 +48,9 @@ jobs:
       - name: Set Cargo output root
         uses: ./.github/actions/cargo-target-root
 
-      - name: Pull LFS files
-        run: git lfs pull
+      # skip for now
+      #- name: Pull LFS files
+      #  run: git lfs pull
 
       # Cargo's freshness check is mtime-based. A fresh `actions/checkout`
       # stamps every submodule source file with the checkout time, which is
