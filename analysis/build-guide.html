@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>如何编译 LiveKit C++ SDK · 编译专题</title>
+<style>
+:root{
+  --bg:#0e1116; --panel:#161b22; --panel2:#1c222b; --line:#2a323d;
+  --tx:#dfe5ec; --tx2:#9aa7b6; --accent:#4ea1ff; --accent2:#3ddc97;
+  --warn:#f0b429; --red:#ef5b5b; --sidebar:286px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);
+  font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-decoration:none}
+
+/* ---------- 侧边栏 ---------- */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar);background:var(--panel);
+  border-right:1px solid var(--line);overflow-y:auto;z-index:20;
+  transition:transform .25s ease, opacity .25s ease}
+#sidebar .brand{padding:20px 20px 14px;border-bottom:1px solid var(--line)}
+#sidebar .brand b{display:block;font-size:15px;letter-spacing:.4px}
+#sidebar .brand span{display:block;color:var(--tx2);font-size:12px;margin-top:4px}
+#nav{padding:12px 10px 40px}
+#nav a{display:block;padding:7px 12px;margin:2px 0;border-radius:7px;color:var(--tx2);
+  font-size:13.5px;border-left:2px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nav a:hover{background:var(--panel2);color:var(--tx)}
+#nav a.lv3{padding-left:26px;font-size:12.5px;opacity:.88}
+#nav a.active{color:var(--accent);background:rgba(78,161,255,.10);border-left-color:var(--accent)}
+#toggle{position:fixed;top:14px;left:calc(var(--sidebar) + 14px);z-index:30;
+  background:var(--panel2);color:var(--tx);border:1px solid var(--line);border-radius:8px;
+  padding:8px 12px;cursor:pointer;font-size:13px;transition:left .25s ease}
+#toggle:hover{border-color:var(--accent);color:var(--accent)}
+body.collapsed #sidebar{transform:translateX(-100%);opacity:0;pointer-events:none}
+body.collapsed #toggle{left:14px}
+#page{margin-left:var(--sidebar);transition:margin-left .25s ease}
+#main{margin:0 auto;padding:34px 46px 120px;max-width:1180px}
+body.collapsed #page{margin-left:0}
+
+/* ---------- 内容 ---------- */
+h1{font-size:29px;margin:8px 0 6px;letter-spacing:.5px}
+h2{font-size:21px;margin:46px 0 14px;padding-bottom:9px;border-bottom:1px solid var(--line);
+  scroll-margin-top:26px}
+h3{font-size:16px;margin:26px 0 10px;color:var(--accent2);scroll-margin-top:26px}
+p{margin:10px 0;color:var(--tx)}
+ul,ol{color:var(--tx);padding-left:22px}
+li{margin:5px 0}
+code{background:var(--panel2);border:1px solid var(--line);border-radius:4px;
+  padding:1px 5px;font-size:12.5px;color:#e7c987}
+.lead{color:var(--tx2);font-size:15px}
+.tag{display:inline-block;background:rgba(78,161,255,.12);color:var(--accent);
+  border:1px solid rgba(78,161,255,.35);border-radius:20px;padding:2px 11px;font-size:12px;margin-right:6px}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+th{background:var(--panel2);color:var(--tx);font-weight:600}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+.box{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:12px 16px;margin:16px 0}
+.box.warn{border-left-color:var(--warn)}
+.box.red{border-left-color:var(--red)}
+.box.ok{border-left-color:var(--accent2)}
+.box b{color:var(--accent)}
+.box.warn b{color:var(--warn)}
+.box.red b{color:var(--red)}
+.box.ok b{color:var(--accent2)}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+  overflow:auto;color:var(--tx2);font-size:12.5px;line-height:1.6}
+pre code{background:none;border:none;padding:0;color:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin:14px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px}
+.card h4{margin:0 0 6px;font-size:14px;color:var(--accent)}
+.card p{margin:0;font-size:13px;color:var(--tx2)}
+.footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);color:var(--tx2);font-size:12.5px}
+.r{color:var(--red);font-weight:600}
+.y{color:var(--warn);font-weight:600}
+.g{color:var(--accent2);font-weight:600}
+.src{color:var(--tx2);font-size:12px}
+
+/* ---------- 图容器 ---------- */
+.diagram{margin:18px 0 26px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.diagram .bar{display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:var(--panel2);border-bottom:1px solid var(--line)}
+.diagram .bar .title{font-size:13px;color:var(--tx);font-weight:600;margin-right:auto}
+.diagram .bar .hint{font-size:11.5px;color:var(--tx2);margin-right:6px}
+.diagram .bar button{background:var(--panel);color:var(--tx);border:1px solid var(--line);
+  border-radius:6px;min-width:30px;height:27px;cursor:pointer;font-size:14px;line-height:1}
+.diagram .bar button:hover{border-color:var(--accent);color:var(--accent)}
+.viewport{position:relative;height:430px;overflow:hidden;cursor:grab;
+  background-color:#11151b;
+  background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.07) 1px, transparent 0);
+  background-size:22px 22px;touch-action:none}
+.viewport.dragging{cursor:grabbing}
+.canvas{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+.canvas svg{display:block;max-width:none!important;background:transparent!important}
+.diagram .status{padding:6px 12px;font-size:12px;color:var(--tx2);border-top:1px solid var(--line)}
+
+/* ---------- 大图模式 ---------- */
+#diagram-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.74);z-index:40;display:none}
+body.has-expanded #diagram-backdrop{display:block}
+body.has-expanded{overflow:hidden}
+.diagram.expanded{position:fixed;top:5vh;left:5vw;width:90vw;height:90vh;z-index:50;
+  margin:0;display:flex;flex-direction:column;border-color:var(--accent);
+  box-shadow:0 18px 64px rgba(0,0,0,.7)}
+.diagram.expanded .viewport{flex:1 1 auto;height:auto}
+.diagram.expanded .bar .hint::after{content:" · 点击图框外恢复"}
+@media (max-width:900px){
+  #page{margin-left:0}
+  #main{padding:24px 18px 90px}
+  #sidebar{transform:translateX(-100%);opacity:0}
+  #toggle{left:14px}
+  body:not(.collapsed) #sidebar{transform:none;opacity:1}
+  body:not(.collapsed) #toggle{left:calc(var(--sidebar) + 14px)}
+}
+</style>
+</head>
+<body>
+
+<button id="toggle" type="button" aria-label="展开/收起导航">≡ 导航</button>
+<div id="diagram-backdrop" aria-hidden="true"></div>
+
+<nav id="sidebar">
+  <div class="brand"><b>如何编译本项目</b><span>工具链 · 依赖 · 配置 · 产物 · 排错</span></div>
+  <div id="nav"></div>
+</nav>
+
+<div id="page">
+<main id="main">
+  <h1>如何编译 LiveKit C++ SDK</h1>
+  <p class="lead">编译专题：工具链、依赖拉取、配置、产物与排错。不涉及业务代码与架构改造。</p>
+  <p>
+    <span class="tag">client-sdk-cpp @ 980332b</span>
+    <span class="tag">client-sdk-rust @ ede8ac5</span>
+    <span class="tag">2026-11-11 实测</span>
+    <span class="tag">未执行修复 / 未实际构建</span>
+  </p>
+  <div class="box"><b>怎么读</b>：左侧导航跳转，「≡ 导航」收起；架构图支持滚轮缩放、拖拽平移、工具栏放大/重置/⤢ 大图，双击图框内重置。单文件内联 SVG，离线可用。MD 版为内容源。</div>
+  <div class="box red"><b>一句话</b>：编译入口只有 <code>./build.sh</code>（Linux/macOS）/ <code>build.cmd</code>（Windows），<code>AGENTS.md</code> 明确禁止直接调用 CMake 构建 SDK。当前本机 <b>clang 21+、libclang、ninja、git-lfs 全部缺失</b>，属于必须先解决的阻塞项。</div>
+
+  <h2 id="s0">0. 结论速览与当前环境实测</h2>
+  <p>一次成功编译 = 三件事都就位：① 工具链；② 源码与子模块；③ 网络依赖（CMake FetchContent、Cargo、预编译 libwebrtc）。<strong>当前：第 1 项严重缺失，第 2 项部分缺失，第 3 项尚未触发（因为还没构建）。</strong></p>
+  <table>
+    <tr><th>项</th><th>实测值</th><th>要求</th><th>状态</th></tr>
+    <tr><td><code>cmake</code></td><td>4.2.3</td><td>≥ 3.25</td><td class="g">✅ 满足</td></tr>
+    <tr><td><code>cargo</code> / <code>rustc</code></td><td>1.93.1</td><td>stable</td><td class="g">✅ 满足</td></tr>
+    <tr><td><code>pkg-config</code> / OpenSSL</td><td>2.5.1 / 3.5.5</td><td>系统库</td><td class="g">✅ 满足</td></tr>
+    <tr><td><code>ninja</code></td><td class="r">未安装</td><td>linux-base preset 用 Ninja generator</td><td class="r">🔴 阻塞</td></tr>
+    <tr><td><code>clang</code> / <code>clang++</code></td><td class="r">未安装</td><td>21+</td><td class="r">🔴 阻塞</td></tr>
+    <tr><td><code>clang-21</code> / <code>clang++-21</code></td><td class="r">未安装</td><td>21+</td><td class="r">🔴 阻塞</td></tr>
+    <tr><td><code>libclang-21</code></td><td class="r">未找到</td><td>工具链脚本强制要求</td><td class="r">🔴 阻塞</td></tr>
+    <tr><td><code>protoc</code></td><td>未安装</td><td><b>不需要</b>（Linux 走 vendored protoc）</td><td>⚪ 无需处理</td></tr>
+    <tr><td><code>git-lfs</code></td><td class="y">未安装</td><td>拉 <code>data/welcome.wav</code></td><td class="y">🟡 待处理</td></tr>
+    <tr><td><code>gstreamer-1.0</code></td><td class="y">未安装</td><td>仅 capture 含 gstreamer 时</td><td class="y">🟡 条件性</td></tr>
+    <tr><td><code>client-sdk-rust</code></td><td><code>ede8ac5</code> 已初始化</td><td>编译必需</td><td class="g">✅ 本次已解决</td></tr>
+    <tr><td>嵌套 <code>protocol</code> / <code>libyuv</code></td><td><code>3fbe5098</code> / <code>91727608</code></td><td>编译必需</td><td class="g">✅ 本次已解决</td></tr>
+    <tr><td><code>cpp-tools</code></td><td class="y">空目录</td><td>编译不需要；本地 lint 需要</td><td class="y">🟡 待处理</td></tr>
+    <tr><td><code>cpp-example-collection</code></td><td class="y"><code>-</code> 未初始化</td><td>仅 <code>-examples</code> / <code>-all</code> preset</td><td class="y">🟡 条件性</td></tr>
+    <tr><td>网络</td><td class="r">github / googlesource 间歇 TCP 不通</td><td>所有拉取环节</td><td class="r">🔴 需规避</td></tr>
+  </table>
+  <div class="box warn"><b>符号</b>：🔴 直接让编译失败；🟡 视构建选项而定或只影响开发体验；⚪ 看起来缺、其实不用装。</div>
+
+  <h2 id="s1">1. 编译全景</h2>
+  <div class="diagram" data-title="图 1 · 从工具链到两个 so 的完整链路">
+    <div class="bar"><span class="title">图 1 · 从工具链到两个 so 的完整链路</span>
+      <span class="hint">滚轮缩放 · 拖拽平移 · ⤢ 大图 · 双击重置</span>
+      <button data-act="out" title="缩小">−</button><button data-act="in" title="放大">+</button>
+      <button data-act="fit" title="大图显示 / 恢复">⤢</button><button data-act="reset" title="重置">↺</button>
+      <span class="zoomval" style="font-size:11.5px;color:var(--tx2);min-width:38px;text-align:right">100%</span></div>
+    <div class="viewport"><div class="canvas">
+      <svg width="1000" height="470" viewBox="0 0 1000 470" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+        <defs><marker id="a1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4ea1ff"/></marker></defs>
+        <g font-size="12.5">
+          <rect x="40" y="18" width="500" height="52" rx="9" fill="#1c2a3a" stroke="#4ea1ff" stroke-width="1.5"/>
+          <text x="290" y="40" text-anchor="middle" font-weight="700" fill="#4ea1ff">① 工具链就位</text>
+          <text x="290" y="59" text-anchor="middle" fill="#9aa7b6">cmake / ninja / clang21+libclang / cargo / git-lfs</text>
+
+          <rect x="40" y="86" width="500" height="52" rx="9" fill="#1c2a3a" stroke="#4ea1ff" stroke-width="1.5"/>
+          <text x="290" y="108" text-anchor="middle" font-weight="700" fill="#4ea1ff">② 源码与依赖拉取</text>
+          <text x="290" y="127" text-anchor="middle" fill="#9aa7b6">3 顶层 + 2 嵌套 gitlink · LFS · FetchContent · crate</text>
+
+          <rect x="40" y="154" width="500" height="52" rx="9" fill="#243046" stroke="#7c9cff" stroke-width="1.5"/>
+          <text x="290" y="176" text-anchor="middle" font-weight="700" fill="#cfe0ff">③ ./build.sh release</text>
+          <text x="290" y="195" text-anchor="middle" fill="#9aa7b6">AGENTS.md：禁止直接调 CMake 构建 SDK</text>
+
+          <rect x="40" y="222" width="500" height="52" rx="9" fill="#1c2a3a" stroke="#4ea1ff" stroke-width="1.5"/>
+          <text x="290" y="244" text-anchor="middle" font-weight="700" fill="#4ea1ff">④ configure_build_toolchain()</text>
+          <text x="290" y="263" text-anchor="middle" fill="#9aa7b6">source setup-linux-toolchain.sh → CC/CXX/LIBCLANG_PATH</text>
+
+          <rect x="40" y="290" width="500" height="52" rx="9" fill="#1c2a3a" stroke="#4ea1ff" stroke-width="1.5"/>
+          <text x="290" y="312" text-anchor="middle" font-weight="700" fill="#4ea1ff">⑤ configure()</text>
+          <text x="290" y="331" text-anchor="middle" fill="#9aa7b6">cmake --preset linux-release -DLIVEKIT_CAPTURE=...</text>
+
+          <rect x="40" y="358" width="500" height="52" rx="9" fill="#1c2a3a" stroke="#4ea1ff" stroke-width="1.5"/>
+          <text x="290" y="380" text-anchor="middle" font-weight="700" fill="#4ea1ff">⑥ build() → CMake add_custom_command</text>
+          <text x="290" y="399" text-anchor="middle" fill="#9aa7b6">run_cargo.cmake → cargo build -p livekit-ffi --release</text>
+
+          <rect x="40" y="426" width="920" height="36" rx="9" fill="#16302a" stroke="#3ddc97" stroke-width="2"/>
+          <text x="500" y="449" text-anchor="middle" font-weight="700" fill="#3ddc97">⑦ liblivekit_ffi.so + liblivekit.so（$ORIGIN 同目录）→ --bundle → cmake --install</text>
+        </g>
+        <g stroke="#4ea1ff" stroke-width="1.6" marker-end="url(#a1)">
+          <line x1="290" y1="70" x2="290" y2="84"/><line x1="290" y1="138" x2="290" y2="152"/>
+          <line x1="290" y1="206" x2="290" y2="220"/><line x1="290" y1="274" x2="290" y2="288"/>
+          <line x1="290" y1="342" x2="290" y2="356"/><line x1="290" y1="410" x2="290" y2="424"/>
+        </g>
+        <rect x="580" y="86" width="380" height="120" rx="9" fill="#2a2118" stroke="#f0b429" stroke-width="1.5"/>
+        <text x="770" y="108" text-anchor="middle" font-size="12.5" font-weight="700" fill="#f0b429">网络拉取点（本图右侧）</text>
+        <text x="596" y="132" font-size="11.5" fill="#dfe5ec">· 子模块 ×5 + LFS ×1</text>
+        <text x="596" y="153" font-size="11.5" fill="#dfe5ec">· FetchContent：absl / protobuf / spdlog / json / gtest</text>
+        <text x="596" y="174" font-size="11.5" fill="#dfe5ec">· crates.io + 预编译 libwebrtc zip</text>
+        <text x="596" y="195" font-size="11.5" fill="#9aa7b6">任一点中断都会让构建挂掉</text>
+        <line x1="540" y1="112" x2="578" y2="112" stroke="#f0b429" stroke-width="1.6" stroke-dasharray="5 3"/>
+        <rect x="580" y="290" width="380" height="120" rx="9" fill="#1a2b2a" stroke="#3ddc97" stroke-width="1.5"/>
+        <text x="770" y="312" text-anchor="middle" font-size="12.5" font-weight="700" fill="#3ddc97">两个编译器都上场</text>
+        <text x="596" y="336" font-size="11.5" fill="#dfe5ec">· clang++ 编 webrtc-sys/src/*.cpp（C++ 胶水）</text>
+        <text x="596" y="357" font-size="11.5" fill="#dfe5ec">· rustc 编 .rs（含 #[cxx::bridge]）</text>
+        <text x="596" y="378" font-size="11.5" fill="#dfe5ec">· CMake 再编 C++ SDK src/*.cpp</text>
+        <text x="596" y="399" font-size="11.5" fill="#9aa7b6">由 build.sh → CMake → cargo → build.rs 逐层调度</text>
+        <line x1="540" y1="316" x2="578" y2="316" stroke="#3ddc97" stroke-width="1.6" stroke-dasharray="5 3"/>
+      </svg>
+    </div></div>
+    <div class="status">已渲染 · 可拖拽缩放</div>
+  </div>
+  <div class="box"><b>关键</b>：这不是纯 Rust 构建，也不是纯 C++ 构建。<b>C++ 编译器和 rustc 都要上场</b>，由 <code>build.sh</code> → CMake → cargo → <code>build.rs</code> 逐层调度。</div>
+
+  <h2 id="s2">2. 前置一：工具链</h2>
+  <h3>2.1 硬性要求</h3>
+  <table>
+    <tr><th>工具</th><th>要求</th><th>谁在用</th></tr>
+    <tr><td>CMake</td><td>≥ 3.25</td><td><code>build.sh</code> 通过 <code>CMakePresets.json</code>（version 6）配置</td></tr>
+    <tr><td>Ninja</td><td class="r">必需（Linux/macOS）</td><td><span class="src">CMakePresets.json:53-69</span> 的 <code>linux-base</code> / <code>macos-base</code> 指定 <code>"generator": "Ninja"</code></td></tr>
+    <tr><td>Rust / Cargo</td><td>最新 stable</td><td>编译 <code>client-sdk-rust/livekit-ffi</code></td></tr>
+    <tr><td>clang / clang++</td><td class="r">21+，且两者同版本</td><td>编译 <code>webrtc-sys/src/*.cpp</code> 和 C++ SDK <code>src/*.cpp</code></td></tr>
+    <tr><td>libclang</td><td>与 clang 同版本</td><td>cxx / UniFFI 绑定生成</td></tr>
+    <tr><td>Git + LFS</td><td>需要</td><td>子模块与 <code>data/welcome.wav</code></td></tr>
+    <tr><td>pkg-config / OpenSSL / libcurl</td><td>系统库</td><td><span class="src">docs/building.md:37-40</span></td></tr>
+  </table>
+
+  <h3>2.2 <code>setup-linux-toolchain.sh</code> 的选择逻辑（必须 source）</h3>
+  <p><span class="src">build.sh:45-50</span> 在 Linux 上执行 <code>source scripts/setup-linux-toolchain.sh</code>。脚本 <span class="src">:17-21</span> 会<b>拒绝被直接执行</b>（因为要 <code>export</code> 变量到当前 shell）。选择顺序（<span class="src">:90-140</span>）：</p>
+  <ol>
+    <li><code>LLVM_ROOT</code> 显式指定 → <code>${LLVM_ROOT}/bin/clang{,++}</code></li>
+    <li>否则 <code>CC</code> / <code>CXX</code> 都设了 → 用它们（只设一个会报错）</li>
+    <li>否则扫 <code>/opt/llvm-*</code>（按版本倒序）</li>
+    <li>否则从 <code>clang-40</code> 递减找到 <code>clang-21</code></li>
+    <li>最后试裸 <code>clang</code> / <code>clang++</code></li>
+  </ol>
+  <p>每个候选都要通过三重校验（<span class="src">:66-88</span>）：clang major ≥ 21、CC/CXX 版本一致、能找到 <code>libclang.so</code>（排除 <code>*-cpp.*</code>）。全部失败则报错：</p>
+  <pre><code>ERROR: Linux builds require clang/clang++ 21+ and libclang.
+Ubuntu 22.04 and 24.04 distro clang versions are too old.
+Install clang-21 from apt.llvm.org or set LLVM_ROOT to a compatible LLVM installation.</code></pre>
+  <p>成功时打印 <code>CC=</code> / <code>CXX=</code> / <code>LIBCLANG_PATH=</code>（<span class="src">:136-139</span>）。</p>
+
+  <h3>2.3 为什么不能用 GCC / 系统自带的旧 clang</h3>
+  <div class="box red"><b>ABI 陷阱</b>：<span class="src">webrtc-sys/build.rs:531-547</span> —— 预编译 <code>libwebrtc.a</code> 用 Chromium 的 <b>hermetic libc++</b>（与系统隔离的 C++ 标准库），其 <code>trivial_abi</code> 标注会改变调用约定（ABI，二进制层面传参/返回值的规则）。GCC 会接受却静默忽略该属性，导致 <code>libwebrtc.a</code> 把 <code>std::unique_ptr</code> 放在寄存器返回、而 GCC 调用方去 sret 槽读，<b>第一次使用就是野指针</b>。因此 Linux 强制 clang++，且 <code>build.rs:546</code> 直接 <code>builder.compiler("clang++")</code>。Ubuntu 22.04 自带 clang 14、24.04 自带 clang 18，都不够。</div>
+
+  <h3>2.4 安装命令（Linux / Ubuntu）</h3>
+  <pre><code># 基础包（含 ninja、git-lfs、pkg-config、系统库）
+sudo apt update &amp;&amp; sudo apt install -y \
+  build-essential cmake ninja-build pkg-config git git-lfs curl \
+  libglib2.0-dev libssl-dev libcurl4-openssl-dev \
+  wget ca-certificates gnupg lsb-release
+
+# clang 21（发行版自带版本太旧，走 apt.llvm.org）
+sudo install -m 0755 -d /etc/apt/keyrings
+wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+  | sudo tee /etc/apt/keyrings/llvm.asc &gt;/dev/null
+sudo chmod a+r /etc/apt/keyrings/llvm.asc
+codename=$(lsb_release -cs)
+echo "deb [signed-by=/etc/apt/keyrings/llvm.asc] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-21 main" \
+  | sudo tee /etc/apt/sources.list.d/llvm-21.list &gt;/dev/null
+sudo apt update
+sudo apt install -y clang-21 libclang-21-dev   # libclang 必须齐
+
+# Rust（若未装）
+curl https://sh.rustup.rs -sSf | sh
+. "$HOME/.cargo/env"
+
+# 验证
+source scripts/setup-linux-toolchain.sh</code></pre>
+  <p class="src">依据：docs/building.md:65-93、.github/actions/setup-sdk-deps/action.yml:33-76。Ubuntu 22.04 自带 CMake 3.22 &lt; 3.25 需另装；本机 4.2.3 已满足。</p>
+
+  <h3>2.5 一个容易误判的点：<code>protoc</code> 不用装</h3>
+  <div class="box ok"><b>不是问题</b>：<span class="src">cmake/protobuf.cmake:110-207</span> —— Linux/macOS 走 <b>vendored</b> 路径，FetchContent 下载并编译 protobuf 25.3，自己产出 <code>protobuf::protoc</code>，再由 <span class="src">cmake/run_cargo.cmake:41</span> 把 <code>PROTOC</code> 环境变量传给 cargo。所以系统 <code>protoc</code> 缺失无需处理 —— 但 FetchContent 必须从 GitHub 下到那两个 tarball。只有 <code>-DLIVEKIT_USE_SYSTEM_PROTOBUF=ON</code> 或 Windows/vcpkg 路径才用系统 protoc。</div>
+
+  <h2 id="s3">3. 前置二：源码、子模块与 LFS</h2>
+  <h3>3.1 三层 gitlink 与版本契约</h3>
+  <table>
+    <tr><th>路径</th><th>来源</th><th>锁定 commit</th><th>编译是否需要</th></tr>
+    <tr><td><code>client-sdk-rust</code></td><td>github.com/livekit/rust-sdks.git</td><td><code>ede8ac5…</code></td><td class="r"><b>必需</b>（Rust FFI 源码 + proto）</td></tr>
+    <tr><td><code>.../livekit-protocol/protocol</code></td><td>github.com/livekit/protocol</td><td><code>3fbe5098…</code></td><td class="r"><b>必需</b>（protobuf 定义）</td></tr>
+    <tr><td><code>.../yuv-sys/libyuv</code></td><td>chromium.googlesource.com/libyuv</td><td><code>91727608…</code></td><td class="r"><b>必需</b>（libyuv 源码）</td></tr>
+    <tr><td><code>cpp-tools</code></td><td>github.com/livekit/cpp-tools.git</td><td><code>4dc3762…</code></td><td>编译<b>不需要</b>（lint 配置）</td></tr>
+    <tr><td><code>cpp-example-collection</code></td><td>github.com/livekit-examples/…</td><td><code>7abd4b9…</code></td><td>仅 <code>-examples</code> / <code>-all</code></td></tr>
+  </table>
+  <p>版本由 <b>gitlink</b>（子模块指针，git 里 <code>160000 commit</code> 类型，只存 SHA）决定，不是分支或 tag。<code>git submodule update --init --recursive</code> 默认 checkout 到该 SHA（detached HEAD，HEAD 直接指向某个 commit 而不挂分支名）；<b>绝不能加 <code>--remote</code></b>，否则会拉远端最新并改写 pin。<span class="src">rust-release-check.yml</span> 还会校验 pinned commit 对应已发布 release。</p>
+
+  <h3>3.2 Git LFS</h3>
+  <p><span class="src">.gitattributes:1</span>：<code>data/welcome.wav filter=lfs diff=lfs merge=lfs -text</code>，测试用音频资产，需 <code>git lfs pull</code>。本机 <code>git-lfs</code> 未安装，这一步还不能跑。</p>
+
+  <h3>3.3 本次拉取 <code>client-sdk-rust</code> 失败的完整复盘</h3>
+  <table>
+    <tr><th>轮次</th><th>命令</th><th>结果</th></tr>
+    <tr><td>1</td><td><code>git submodule update --init --recursive client-sdk-rust</code></td><td class="r"><b>39 分钟失败</b>：<code>curl 56 Recv failure: 连接超时</code>、<code>预期仍然需要 4263 / 46199 个字节</code>、<code>HTTP/2 stream 5 was not closed cleanly: CANCEL</code>、<code>EOF</code>、<code>index-pack 输出无效</code>；自动重试一次仍失败</td></tr>
+    <tr><td>2</td><td>改用 <code>--filter=blob:none</code> + <code>http.version=HTTP/1.1</code> + <code>lowSpeedLimit=0</code></td><td class="g">主仓库成功 checkout <code>ede8ac5</code>；但两个嵌套子模块全部 TCP 超时（~135s）/ SSL EOF</td></tr>
+    <tr><td>3</td><td>单独重试两个嵌套子模块</td><td class="r">仍稳定失败，<code>git submodule status</code> 保持 <code>-</code> 前缀</td></tr>
+    <tr><td>4</td><td><code>https://ghfast.top/</code> 前缀 + <code>url.&lt;base&gt;.insteadOf</code> 临时重写</td><td class="g"><code>protocol</code> 一次成功；googlesource 经该前缀返回 403（只代理 GitHub）</td></tr>
+    <tr><td>5</td><td>libyuv 改用 GitHub 等价镜像 <code>CogentEmbedded/libyuv</code> + 同一前缀</td><td class="g"><b>14 秒成功</b>，checkout <code>91727608</code></td></tr>
+  </table>
+  <div class="box warn"><b>5 条经验</b>：
+    <ol style="margin-bottom:0">
+      <li>全量 clone 大仓库中断<b>不能续传</b> → 用 <code>--filter=blob:none</code>（部分克隆，只拉 commit/tree、blob 按需），中断后已下载对象保留。</li>
+      <li><b>不要加 <code>--depth 1</code></b>：pin 不是分支顶端，浅克隆可能取不到该 commit。</li>
+      <li><code>http.version=HTTP/1.1</code> 规避 HTTP/2 CANCEL；<code>lowSpeedLimit=0</code> 禁用低速断连。</li>
+      <li>googlesource 在本网络完全不通，只能走 GitHub 镜像；<b>git 按 SHA 自校验</b>，能 checkout 到 <code>91727608</code> 就说明内容与原仓库一致（对象哈希由内容决定）。</li>
+      <li>最终验收：三层 SHA 全部精确匹配、父仓库与子模块仓库 <code>git status</code> 干净、无持久化 <code>url.*</code> 配置、两个嵌套仓库 <code>remote.origin.url</code> 仍是官方地址 —— <b>零副作用</b>。</li>
+    </ol>
+  </div>
+
+  <h3>3.4 <code>cpp-tools</code> 为空到底要不要紧</h3>
+  <div class="grid">
+    <div class="card"><h4>CI / 编译</h4><p><code>builds.yml:56-60</code> 会递归拉它，但 <code>build.sh</code> 与 <code>CMakeLists.txt</code> <b>完全没有引用</b> cpp-tools / clang-format / clang-tidy（实测 Grep 无匹配）。→ <b>编译不需要它的内容</b>。</p></div>
+    <div class="card"><h4>但要拉得到</h4><p><code>submodules: recursive</code> 若任一子模块 clone 失败，checkout 这一步会失败、整个 job 挂掉。准确说法是"不依赖内容，但依赖能拉到"。</p></div>
+    <div class="card"><h4>本地 lint</h4><p><code>AGENTS.md</code> 要求根级 <code>.clang-format</code> / <code>.clang-tidy</code> 符号链接，需 <code>git submodule update --init cpp-tools</code> + <code>./cpp-tools/install.sh</code>。本机为空 → <b>lint 现在跑不了，但不影响编 so</b>。</p></div>
+    <div class="card"><h4>lint 不是编译前置</h4><p><code>ci.yml:114-118</code> 与 <code>:139-143</code> 的 builds / cpp-tools 都只 <code>needs: changes</code>，并行独立，lint 失败不阻止 build 开始。</p></div>
+  </div>
+
+  <h2 id="s4">4. 依赖拉取全景（所有网络点）</h2>
+  <table>
+    <tr><th>#</th><th>拉取内容</th><th>来源 / 触发点</th><th>失败症状</th></tr>
+    <tr><td>1</td><td>3 个顶层子模块</td><td><code>.gitmodules</code></td><td><code>Failed to connect</code> / <code>EOF</code> / 目录空</td></tr>
+    <tr><td>2</td><td>2 个嵌套子模块</td><td><code>client-sdk-rust/.gitmodules</code>（含 googlesource）</td><td>同上，最易失败</td></tr>
+    <tr><td>3</td><td>LFS <code>data/welcome.wav</code></td><td><code>.gitattributes:1</code>，<code>git lfs pull</code></td><td><code>git: 'lfs' 不是一个 git 命令</code></td></tr>
+    <tr><td>4</td><td>Abseil 20240116.2</td><td><span class="src">cmake/protobuf.cmake:115-119</span> GitHub tarball</td><td>FetchContent 下载失败</td></tr>
+    <tr><td>5</td><td>Protobuf 25.3</td><td><span class="src">cmake/protobuf.cmake:121-126</span> GitHub release</td><td>同上（vendored protoc 也来自这里）</td></tr>
+    <tr><td>6</td><td>spdlog 1.15.1</td><td><span class="src">cmake/spdlog.cmake:75-77</span> GitHub tarball</td><td>同上</td></tr>
+    <tr><td>7</td><td>nlohmann/json 3.12.0</td><td><span class="src">cmake/nlohmann_json.cmake:34-36</span></td><td>同上</td></tr>
+    <tr><td>8</td><td>GoogleTest 1.14.0</td><td><span class="src">src/tests/CMakeLists.txt:10-12</span> git clone</td><td>仅 <code>-tests</code> / <code>-all</code> preset</td></tr>
+    <tr><td>9</td><td>crates.io 全部 crate</td><td><code>client-sdk-rust/Cargo.lock</code></td><td>cargo 网络错误</td></tr>
+    <tr><td>10</td><td><b>预编译 libwebrtc</b></td><td><span class="src">webrtc-sys/build/src/lib.rs:101-107</span> <code>github.com/livekit/rust-sdks/releases/download/&lt;TAG&gt;/webrtc-&lt;triple&gt;.zip</code></td><td><code>webrtc download attempt N failed</code></td></tr>
+  </table>
+
+  <div class="diagram" data-title="图 2 · 依赖拉取拓扑（三类外部源）">
+    <div class="bar"><span class="title">图 2 · 依赖拉取拓扑（三类外部源）</span>
+      <span class="hint">滚轮缩放 · 拖拽平移 · ⤢ 大图 · 双击重置</span>
+      <button data-act="out">−</button><button data-act="in">+</button><button data-act="fit">⤢</button><button data-act="reset">↺</button>
+      <span class="zoomval" style="font-size:11.5px;color:var(--tx2);min-width:38px;text-align:right">100%</span></div>
+    <div class="viewport"><div class="canvas">
+      <svg width="1000" height="440" viewBox="0 0 1000 440" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+        <defs><marker id="a2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4ea1ff"/></marker></defs>
+        <g font-size="11.5">
+          <rect x="20" y="20" width="300" height="230" rx="10" fill="#1a2434" stroke="#4ea1ff"/>
+          <text x="170" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#4ea1ff">Git 层（子模块 + LFS）</text>
+          <text x="40" y="70" fill="#dfe5ec">· github.com/livekit/rust-sdks</text>
+          <text x="40" y="92" fill="#dfe5ec">· github.com/livekit/protocol</text>
+          <text x="40" y="114" fill="#dfe5ec">· github.com/livekit/cpp-tools</text>
+          <text x="40" y="136" fill="#dfe5ec">· .../cpp-example-collection</text>
+          <text x="40" y="158" fill="#ef5b5b">· chromium.googlesource.com/libyuv ✗</text>
+          <text x="40" y="180" fill="#dfe5ec">· LFS: data/welcome.wav</text>
+          <text x="40" y="210" fill="#9aa7b6">→ git submodule update --init --recursive</text>
+          <text x="40" y="232" fill="#9aa7b6">→ git lfs pull</text>
+
+          <rect x="340" y="20" width="300" height="230" rx="10" fill="#1a2434" stroke="#f0b429"/>
+          <text x="490" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#f0b429">CMake FetchContent</text>
+          <text x="360" y="70" fill="#dfe5ec">· abseil 20240116.2</text>
+          <text x="360" y="92" fill="#dfe5ec">· protobuf 25.3（含 protoc）</text>
+          <text x="360" y="114" fill="#dfe5ec">· spdlog 1.15.1</text>
+          <text x="360" y="136" fill="#dfe5ec">· nlohmann/json 3.12.0</text>
+          <text x="360" y="158" fill="#dfe5ec">· googletest 1.14.0（仅 tests）</text>
+          <text x="360" y="194" fill="#9aa7b6">均为 GitHub tarball / git clone</text>
+          <text x="360" y="216" fill="#9aa7b6">绕过：FETCHCONTENT_SOURCE_DIR_*</text>
+
+          <rect x="660" y="20" width="320" height="230" rx="10" fill="#1a2434" stroke="#3ddc97"/>
+          <text x="820" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#3ddc97">Cargo / Rust</text>
+          <text x="680" y="70" fill="#dfe5ec">· crates.io（Cargo.lock 全部 crate）</text>
+          <text x="680" y="92" fill="#dfe5ec">· 预编译 libwebrtc zip</text>
+          <text x="680" y="114" fill="#dfe5ec">　github.com/livekit/rust-sdks</text>
+          <text x="680" y="136" fill="#dfe5ec">　/releases/download/&lt;TAG&gt;/</text>
+          <text x="680" y="158" fill="#dfe5ec">　webrtc-&lt;triple&gt;.zip</text>
+          <text x="680" y="194" fill="#3ddc97">绕过：LK_CUSTOM_WEBRTC=/path</text>
+          <text x="680" y="216" fill="#9aa7b6">目录存在即跳过下载</text>
+
+          <rect x="330" y="300" width="340" height="56" rx="10" fill="#243046" stroke="#7c9cff" stroke-width="2"/>
+          <text x="500" y="323" text-anchor="middle" font-size="13.5" font-weight="700" fill="#cfe0ff">./build.sh release</text>
+          <text x="500" y="343" text-anchor="middle" fill="#9aa7b6">三类依赖缺一不可</text>
+
+          <rect x="250" y="386" width="500" height="44" rx="10" fill="#16302a" stroke="#3ddc97" stroke-width="2"/>
+          <text x="500" y="413" text-anchor="middle" font-size="13" font-weight="700" fill="#3ddc97">liblivekit_ffi.so + liblivekit.so</text>
+        </g>
+        <g stroke="#4ea1ff" stroke-width="1.6" fill="none" marker-end="url(#a2)">
+          <path d="M170,250 C170,275 400,275 440,298"/>
+          <path d="M490,250 L500,298"/>
+          <path d="M820,250 C820,275 600,275 560,298"/>
+          <line x1="500" y1="356" x2="500" y2="384"/>
+        </g>
+      </svg>
+    </div></div>
+    <div class="status">已渲染 · 可拖拽缩放</div>
+  </div>
+
+  <div class="box"><b>两个"绕过下载"开关</b>：
+    <ul style="margin-bottom:0">
+      <li><code>LK_CUSTOM_WEBRTC</code>（<span class="src">webrtc-sys/build/src/lib.rs:79-85,110-116</span>）：指向本地已解压的预编译 libwebrtc，<code>download_webrtc()</code> 看到目录存在就跳过（<span class="src">:208-210</span>）。网络受限时最有效的一招。</li>
+      <li><code>FETCHCONTENT_SOURCE_DIR_&lt;UPPERNAME&gt;</code>（CMake 标准变量）：把 FetchContent 指向本地已下载源码，跳过网络下载。</li>
+    </ul>
+  </div>
+  <p class="src">另：<code>download_webrtc()</code> 自带 2 次重试、间隔 5 秒（webrtc-sys/build/src/lib.rs:212-226），只在 5xx / 429 / 网络错误时重试。</p>
+
+  <h2 id="s5">5. 编译流程逐步拆解</h2>
+  <h3>5.1 命令与 preset 映射</h3>
+  <table>
+    <tr><th>命令</th><th>BUILD_DIR</th><th>preset</th></tr>
+    <tr><td><code>debug</code></td><td><code>build-debug</code></td><td><code>linux-debug</code></td></tr>
+    <tr><td><code>debug-examples</code> / <code>debug-tests</code> / <code>debug-all</code></td><td><code>build-debug</code></td><td><code>linux-debug-*</code></td></tr>
+    <tr><td><code>release</code></td><td><code>build-release</code></td><td><code>linux-release</code></td></tr>
+    <tr><td><code>release-examples</code> / <code>release-tests</code> / <code>release-all</code></td><td><code>build-release</code></td><td><code>linux-release-*</code></td></tr>
+    <tr><td><code>build-all</code></td><td>两者</td><td>依次跑 6 个 preset（<span class="src">build.sh:575-593</span>）</td></tr>
+    <tr><td><code>clean</code> / <code>clean-all</code></td><td>—</td><td><code>clean-all</code> 额外删 <code>client-sdk-rust/target</code>（<span class="src">:440-456</span>）</td></tr>
+  </table>
+  <p><code>CMakePresets.json</code> 结构：隐藏基础 <code>sdk-defaults</code>（<code>LIVEKIT_CAPTURE=""</code>）、<code>tests</code>、<code>vcpkg</code>（仅 Windows）、<code>linux-base</code> / <code>macos-base</code>（<b>Ninja</b>、<code>LIVEKIT_USE_VCPKG=OFF</code>、<code>CMAKE_EXPORT_COMPILE_COMMANDS=ON</code>），再派生 24 个 configure preset。常用选项（<span class="src">build.sh:71-85</span>）：<code>--capture[=list]</code> / <code>--no-capture</code>、<code>--bundle --prefix</code>、<code>--archive</code>、<code>--version</code>、<code>-G</code>、<code>--macos-arch</code>。</p>
+
+  <h3>5.2 configure / build / install 的细节</h3>
+  <ul>
+    <li><b>编译器一致性检查</b>（<span class="src">build.sh:214-233</span>）：若 <code>build-release/CMakeCache.txt</code> 缓存的 <code>CMAKE_CXX_COMPILER</code> 与本次选中的不一致，直接报错 <code>Run './build.sh clean' and retry</code>。换 clang 版本后必须先 clean。</li>
+    <li><b>configure</b>（<span class="src">:235-255</span>）：<code>cmake --preset &lt;PRESET&gt; -DLIVEKIT_CAPTURE=...</code>；preset 失败会回退传统 <code>cmake -S . -B</code>；成功后把 <code>compile_commands.json</code> 符号链接到仓库根。</li>
+    <li><b>并行度</b>（<span class="src">:263-297</span>）：优先 <code>CMAKE_BUILD_PARALLEL_LEVEL</code>，否则取逻辑 CPU 数，兜底 2。</li>
+    <li><b>bundle</b>（<span class="src">:299-357</span>）：<code>cmake --install --prefix &lt;PREFIX&gt;</code>，默认 <code>./sdk-out/livekit-sdk</code>；检查 <code>lib/cmake/LiveKit/</code> 下三个 config 文件是否齐全。</li>
+    <li><b>构建元数据</b>：<code>generated/include/livekit/build.h</code> 生成在构建目录，<b>不写回源码树</b>（AGENTS.md 要求）。</li>
+  </ul>
+
+  <h3>5.3 CMake 如何调起 cargo / 两个编译器的分工</h3>
+  <div class="diagram" data-title="图 3 · 混合构建内部：CMake → cargo → clang++ / rustc">
+    <div class="bar"><span class="title">图 3 · 混合构建内部：CMake → cargo → clang++ / rustc</span>
+      <span class="hint">滚轮缩放 · 拖拽平移 · ⤢ 大图 · 双击重置</span>
+      <button data-act="out">−</button><button data-act="in">+</button><button data-act="fit">⤢</button><button data-act="reset">↺</button>
+      <span class="zoomval" style="font-size:11.5px;color:var(--tx2);min-width:38px;text-align:right">100%</span></div>
+    <div class="viewport"><div class="canvas">
+      <svg width="1000" height="400" viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+        <defs><marker id="a3" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4ea1ff"/></marker></defs>
+        <g font-size="12">
+          <rect x="330" y="16" width="340" height="50" rx="9" fill="#1c2a3a" stroke="#4ea1ff"/>
+          <text x="500" y="37" text-anchor="middle" font-weight="700" fill="#4ea1ff">CMakeLists.txt:262 find_program(cargo)</text>
+          <text x="500" y="55" text-anchor="middle" fill="#9aa7b6">:392-411 add_custom_command → cmake -P run_cargo.cmake</text>
+
+          <rect x="300" y="86" width="400" height="50" rx="9" fill="#1c2a3a" stroke="#4ea1ff"/>
+          <text x="500" y="107" text-anchor="middle" font-weight="700" fill="#4ea1ff">cargo build --package livekit-ffi --release</text>
+          <text x="500" y="125" text-anchor="middle" fill="#9aa7b6">工作目录 client-sdk-rust/ · run_cargo.cmake:25-28</text>
+
+          <rect x="60" y="166" width="380" height="76" rx="9" fill="#1a2434" stroke="#4ea1ff" stroke-width="2"/>
+          <text x="250" y="190" text-anchor="middle" font-weight="700" fill="#4ea1ff">webrtc-sys/build.rs → clang++</text>
+          <text x="250" y="210" text-anchor="middle" fill="#dfe5ec">cxx_build::bridges + cc::Build.files（30+ 个 .cpp）</text>
+          <text x="250" y="230" text-anchor="middle" fill="#9aa7b6">:401 .compile("webrtcsys-cxx") · 链 static=webrtc</text>
+
+          <rect x="560" y="166" width="380" height="76" rx="9" fill="#1a2434" stroke="#a78bfa" stroke-width="2"/>
+          <text x="750" y="190" text-anchor="middle" font-weight="700" fill="#a78bfa">rustc 编 .rs</text>
+          <text x="750" y="210" text-anchor="middle" fill="#dfe5ec">含 #[cxx::bridge] 双向胶水声明</text>
+          <text x="750" y="230" text-anchor="middle" fill="#9aa7b6">video_track.h:40 include 生成的 .rs.h</text>
+
+          <rect x="330" y="272" width="340" height="50" rx="9" fill="#2a2118" stroke="#f0b429" stroke-width="2"/>
+          <text x="500" y="293" text-anchor="middle" font-weight="700" fill="#f0b429">liblivekit_ffi.so（Rust FFI 共享库）</text>
+          <text x="500" y="311" text-anchor="middle" fill="#9aa7b6">CMakeLists.txt:352-356 IMPORTED SHARED</text>
+
+          <rect x="230" y="344" width="540" height="46" rx="9" fill="#16302a" stroke="#3ddc97" stroke-width="2"/>
+          <text x="500" y="364" text-anchor="middle" font-weight="700" fill="#3ddc97">:530 链接 / :562+ 复制 → CMake 编 src/*.cpp → liblivekit.so</text>
+          <text x="500" y="381" text-anchor="middle" fill="#9aa7b6">两个 so 同目录，$ORIGIN runpath 互找</text>
+        </g>
+        <g stroke="#4ea1ff" stroke-width="1.6" fill="none" marker-end="url(#a3)">
+          <line x1="500" y1="66" x2="500" y2="84"/>
+          <path d="M500,136 C500,150 250,150 250,164"/>
+          <path d="M500,136 C500,150 750,150 750,164"/>
+          <path d="M250,242 C250,258 430,258 450,270"/>
+          <path d="M750,242 C750,258 570,258 550,270"/>
+          <line x1="500" y1="322" x2="500" y2="342"/>
+        </g>
+      </svg>
+    </div></div>
+    <div class="status">已渲染 · 可拖拽缩放</div>
+  </div>
+  <p><code>run_cargo.cmake</code> 还负责 <code>PROTOC</code>（<span class="src">:41</span>）、<code>CARGO_TARGET_DIR</code>（<span class="src">:43-45</span>）、<code>RUSTFLAGS</code> / <code>LD_LIBRARY_PATH</code>（<span class="src">:47-50</span>）。Linux 上 <code>RUST_TARGET_TRIPLE</code> 为空（<span class="src">CMakeLists.txt:264-272</span> 只在 macOS 赋值），所以不加 <code>--target</code> —— <b>原生编译</b>。</p>
+  <div class="box warn"><b>硬约束</b>：<code>client-sdk-rust</code> 是混合仓库；<code>.cpp</code> 归 C++ 编译器、<code>.rs</code> 归 rustc，由 <b>build.rs</b>（构建脚本，正式编译前先编译并运行的一段 Rust 程序）统一调度。<b>新增 <code>.cpp</code> 必须登记进 <code>build.rs:67-102</code> 的 <code>builder.files(...)</code>，否则根本不参与编译。</b></div>
+
+  <h3>5.4 feature hash 与两个 bundle</h3>
+  <p><span class="src">CMakeLists.txt:274-290</span>：按 <code>LIVEKIT_CAPTURE</code> 生成的 cargo feature 组合算 SHA256 前 16 位，把 Cargo 输出隔离到 <code>client-sdk-rust/target/cpp-&lt;hash&gt;/</code>（可用 <code>CARGO_TARGET_DIR</code> 改根）。<b>standard（<code>capture=none</code>）与 capture（<code>capture=all</code>）互不共享 Rust 产物，要各编一次 Rust</b> —— 这正是 CI <code>builds.yml:162-228</code> 分两轮构建的原因。</p>
+  <h3>5.5 capture 开关</h3>
+  <p><code>--capture[=gstreamer,pattern,clock]</code> / <code>--no-capture</code>（<span class="src">build.sh:100-212</span>）→ <code>-DLIVEKIT_CAPTURE=</code> → cargo features（<span class="src">CMakeLists.txt:214</span>）。GStreamer 只在包含 <code>gstreamer</code> 源时才需要（<span class="src">docs/building.md:167-211</span>）；本机未安装，因此<b>标准构建（<code>--no-capture</code>）不受影响</b>。</p>
+
+  <h2 id="s6">6. 产物与验证</h2>
+  <h3>6.1 两个共享库</h3>
+  <p><span class="src">docs/building.md:352-361</span>：发布包含 <b><code>liblivekit.so</code>（C++ 层）</b> 与 <b><code>liblivekit_ffi.so</code>（Rust FFI 层）</b>；Linux 上前者用 <code>$ORIGIN</code> runpath（相对自身目录定位依赖库的机制）找同目录的后者。<b>不要直接链 Rust FFI 库</b>。产物在 <code>build-release/lib/</code>，bundle 安装到 <code>&lt;prefix&gt;/lib/</code>。</p>
+  <h3>6.2 bundle 结构</h3>
+  <p><code>cmake --install</code> 安装公开头（<code>include/livekit/</code>）、两个 so、CMake package 文件（<code>LiveKitConfig.cmake</code> 等），下游可 <code>find_package(LiveKit CONFIG)</code>。<code>--archive</code> 再打成 <code>.zip</code> / <code>.tar.gz</code>。</p>
+  <h3>6.3 验证命令</h3>
+  <pre><code># 符号可见性
+python3 .github/scripts/check_no_private_symbols.py build-release/lib/liblivekit.so
+
+# 产物身份与依赖
+file build-release/lib/liblivekit.so build-release/lib/liblivekit_ffi.so
+readelf -d build-release/lib/liblivekit.so | grep -i runpath
+ldd build-release/lib/liblivekit.so
+ldd build-release/lib/liblivekit_ffi.so
+
+# 工具链（必须在同一 shell）
+source scripts/setup-linux-toolchain.sh &amp;&amp; echo "$CC $CXX $LIBCLANG_PATH"
+
+# 子模块与版本
+git submodule status --recursive</code></pre>
+
+  <h2 id="s7">7. 当前环境问题清单与解决顺序（重点）</h2>
+  <div class="box red"><b>前提</b>：用户要求"这些环节必须清晰描述、问题得到解决，才能进入下一步代码修改"。以下是<b>按依赖顺序</b>的最小修复清单。<b>我没有执行它们，也没有完成一次实际构建。</b></div>
+
+  <div class="diagram" data-title="图 4 · 问题优先级与解决顺序">
+    <div class="bar"><span class="title">图 4 · 问题优先级与解决顺序</span>
+      <span class="hint">滚轮缩放 · 拖拽平移 · ⤢ 大图 · 双击重置</span>
+      <button data-act="out">−</button><button data-act="in">+</button><button data-act="fit">⤢</button><button data-act="reset">↺</button>
+      <span class="zoomval" style="font-size:11.5px;color:var(--tx2);min-width:38px;text-align:right">100%</span></div>
+    <div class="viewport"><div class="canvas">
+      <svg width="1000" height="350" viewBox="0 0 1000 350" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+        <defs><marker id="a4" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ef5b5b"/></marker></defs>
+        <g font-size="12">
+          <rect x="20" y="20" width="300" height="132" rx="10" fill="#2a1a1a" stroke="#ef5b5b" stroke-width="2"/>
+          <text x="170" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#ef5b5b">P0 · 阻塞（必须最先解决）</text>
+          <text x="40" y="70" fill="#dfe5ec">· clang 21+ / libclang 缺失</text>
+          <text x="40" y="92" fill="#dfe5ec">· ninja 缺失</text>
+          <text x="40" y="114" fill="#dfe5ec">· 网络不稳（github / googlesource）</text>
+          <text x="40" y="138" fill="#9aa7b6">→ 装工具链 + 7.3 的加速/绕过手段</text>
+
+          <rect x="350" y="20" width="300" height="132" rx="10" fill="#2a2418" stroke="#f0b429" stroke-width="2"/>
+          <text x="500" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#f0b429">P1 · 待处理</text>
+          <text x="370" y="70" fill="#dfe5ec">· git-lfs 未安装</text>
+          <text x="370" y="92" fill="#dfe5ec">· cpp-tools/ 为空</text>
+          <text x="370" y="114" fill="#dfe5ec">· cpp-example-collection 未初始化</text>
+          <text x="370" y="138" fill="#9aa7b6">→ submodule update + git lfs pull</text>
+
+          <rect x="680" y="20" width="300" height="132" rx="10" fill="#1a2a24" stroke="#3ddc97" stroke-width="2"/>
+          <text x="830" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#3ddc97">✅ 已解决（本次会话）</text>
+          <text x="700" y="70" fill="#dfe5ec">· client-sdk-rust @ ede8ac5</text>
+          <text x="700" y="92" fill="#dfe5ec">· protocol @ 3fbe5098</text>
+          <text x="700" y="114" fill="#dfe5ec">· libyuv @ 91727608</text>
+          <text x="700" y="138" fill="#9aa7b6">三层 SHA 精确匹配 · 零副作用</text>
+
+          <rect x="20" y="182" width="960" height="52" rx="9" fill="#243046" stroke="#7c9cff" stroke-width="2"/>
+          <text x="500" y="204" text-anchor="middle" font-size="13" font-weight="700" fill="#cfe0ff">P2 · 条件性：gstreamer-1.0（仅 --capture 含 gstreamer） · protoc 不用装（vendored）</text>
+          <text x="500" y="223" text-anchor="middle" fill="#9aa7b6">标准构建 --no-capture 不受影响</text>
+
+          <rect x="200" y="262" width="600" height="66" rx="10" fill="#16302a" stroke="#3ddc97" stroke-width="2.5"/>
+          <text x="500" y="288" text-anchor="middle" font-size="14" font-weight="700" fill="#3ddc97">./build.sh clean &amp;&amp; ./build.sh release --no-capture</text>
+          <text x="500" y="310" text-anchor="middle" fill="#9aa7b6">→ liblivekit.so + liblivekit_ffi.so → 进入代码修改阶段</text>
+        </g>
+        <g stroke="#ef5b5b" stroke-width="1.6" fill="none" marker-end="url(#a4)">
+          <line x1="170" y1="152" x2="170" y2="180"/>
+          <line x1="500" y1="152" x2="500" y2="180"/>
+          <line x1="830" y1="152" x2="830" y2="180"/>
+          <line x1="500" y1="234" x2="500" y2="260"/>
+        </g>
+      </svg>
+    </div></div>
+    <div class="status">已渲染 · 可拖拽缩放</div>
+  </div>
+
+  <h3>7.1 问题表</h3>
+  <table>
+    <tr><th>#</th><th>问题</th><th>实测</th><th>影响</th><th>解决</th><th>状态</th></tr>
+    <tr><td>P0</td><td>clang 21+ / libclang 缺失</td><td>全无</td><td>工具链脚本直接失败</td><td>装 <code>clang-21 libclang-21-dev</code></td><td class="r">🔴 未解决</td></tr>
+    <tr><td>P0</td><td>ninja 缺失</td><td>未安装</td><td>preset 用 Ninja，configure 失败</td><td><code>apt install ninja-build</code></td><td class="r">🔴 未解决</td></tr>
+    <tr><td>P0</td><td>网络不稳</td><td>间歇 TCP 不通</td><td>子模块 / FetchContent / cargo / libwebrtc 全可能中断</td><td>见 7.3</td><td class="r">🔴 未解决</td></tr>
+    <tr><td>P1</td><td><code>git-lfs</code> 未安装</td><td><code>git lfs</code> 报错</td><td><code>welcome.wav</code> 拉不到</td><td><code>apt install git-lfs &amp;&amp; git lfs pull</code></td><td class="y">🟡 未解决</td></tr>
+    <tr><td>P1</td><td><code>cpp-tools/</code> 为空</td><td>无内容</td><td>编译不受影响；本地 lint 跑不了</td><td><code>submodule update --init cpp-tools</code> + <code>install.sh</code></td><td class="y">🟡 未解决</td></tr>
+    <tr><td>P1</td><td><code>cpp-example-collection</code> 未初始化</td><td><code>-7abd4b9…</code></td><td>仅 examples / all preset</td><td><code>submodule update --init cpp-example-collection</code></td><td class="y">🟡 未解决</td></tr>
+    <tr><td>P2</td><td><code>gstreamer-1.0</code> 未安装</td><td>pkg-config 查无</td><td>仅 capture=gstreamer</td><td><span class="src">docs/building.md:191-198</span></td><td class="y">🟡 条件性</td></tr>
+    <tr><td>—</td><td><code>protoc</code> 未安装</td><td>系统无</td><td><b>无影响</b>（vendored）</td><td>不用处理</td><td>⚪</td></tr>
+    <tr><td>✅</td><td><code>client-sdk-rust</code> 及嵌套子模块</td><td>三层 SHA 匹配</td><td>曾阻塞，现已齐</td><td>本次已用加速前缀 + 镜像解决</td><td class="g">✅ 已解决</td></tr>
+  </table>
+
+  <h3>7.2 最小可编译顺序（建议照此执行）</h3>
+  <pre><code># 1) 工具链（一次性）
+sudo apt install -y ninja-build git-lfs pkg-config libssl-dev libcurl4-openssl-dev
+#    按 2.4 节装 clang-21 + libclang-21-dev
+
+# 2) 验证工具链（必须在当前 shell source）
+source scripts/setup-linux-toolchain.sh
+
+# 3) 补齐剩余子模块与 LFS
+git submodule update --init cpp-tools cpp-example-collection
+git lfs pull
+
+# 4) 版本核对（三层 SHA 应无 '-' 前缀）
+git submodule status --recursive
+
+# 5) 干净构建（换过编译器先清缓存）
+./build.sh clean
+./build.sh release --no-capture
+
+# 6) 产物
+file build-release/lib/liblivekit.so build-release/lib/liblivekit_ffi.so</code></pre>
+  <div class="box warn"><b>注意</b>：<span class="src">build.sh:214-233</span> 的编译器一致性检查 —— 换过编译器后若 <code>build-release/CMakeCache.txt</code> 还在，必须先 <code>./build.sh clean</code>。</div>
+
+  <h3>7.3 网络受限时的替代方案（按拉取点）</h3>
+  <table>
+    <tr><th>拉取点</th><th>手段</th><th>依据 / 说明</th></tr>
+    <tr><td>GitHub 子模块</td><td><code>git -c 'url.https://ghfast.top/https://github.com/.insteadOf=https://github.com/' ...</code></td><td>本次实测 <code>git ls-remote</code> 经前缀返回同源 HEAD；<b>命令级 <code>-c</code>，不改 <code>.gitmodules</code>、不持久化</b></td></tr>
+    <tr><td>googlesource（libyuv）</td><td>GitHub 等价镜像 <code>CogentEmbedded/libyuv</code> + 同一前缀</td><td>本次 14 秒成功；git 按 SHA 自校验，checkout 到 <code>91727608</code> 即内容一致</td></tr>
+    <tr><td>大仓库传输中断</td><td><code>--filter=blob:none</code> + <code>http.version=HTTP/1.1</code> + <code>lowSpeedLimit=0</code></td><td>部分克隆可续、pack 小；不要加 <code>--depth</code>、不要加 <code>--remote</code></td></tr>
+    <tr><td>CMake FetchContent</td><td>手动下载 tarball 后用 <code>FETCHCONTENT_SOURCE_DIR_&lt;NAME&gt;</code> 指向本地目录</td><td>绕过 GitHub 下载；或配 <code>HTTPS_PROXY</code></td></tr>
+    <tr><td>Cargo / crates.io</td><td><code>~/.cargo/config.toml</code> 的 <code>[source.crates-io] replace-with</code> 镜像</td><td>标准 cargo 源替换</td></tr>
+    <tr><td><b>预编译 libwebrtc</b></td><td><code>LK_CUSTOM_WEBRTC=/path/to/webrtc</code></td><td><span class="src">webrtc-sys/build/src/lib.rs:79-85,110-116</span>：目录存在就跳过下载；<b>最有效的一招</b></td></tr>
+  </table>
+
+  <h2 id="s8">8. 常见错误速查</h2>
+  <table>
+    <tr><th>报错 / 现象</th><th>原因</th><th>处理</th></tr>
+    <tr><td><code>ERROR: This script must be sourced</code></td><td>直接执行了工具链脚本</td><td>用 <code>source</code>（<code>build.sh</code> 已正确处理）</td></tr>
+    <tr><td><code>ERROR: Linux builds require clang/clang++ 21+ and libclang</code></td><td>没装 clang-21 / libclang</td><td>按 2.4 安装；确认 CC/CXX 同版本</td></tr>
+    <tr><td><code>ERROR: ... was configured with a different compiler</code></td><td>CMakeCache 里缓存的编译器变了</td><td><code>./build.sh clean</code> 后重试</td></tr>
+    <tr><td><code>fatal: unable to access 'https://github.com/...'</code> / <code>RPC failed; curl 56</code></td><td>网络中断</td><td>7.3 的加速前缀 + 部分克隆</td></tr>
+    <tr><td><code>Vendored protobuf did not create a protoc target</code></td><td>FetchContent 下载/构建失败</td><td>检查网络或用 <code>FETCHCONTENT_SOURCE_DIR_*</code></td></tr>
+    <tr><td><code>webrtc download attempt N failed, retrying in 5s</code></td><td>libwebrtc zip 下载失败</td><td><code>LK_CUSTOM_WEBRTC</code> 指向本地预编译包</td></tr>
+    <tr><td><code>Missing proto files or client-sdk-rust directory</code></td><td>子模块未初始化</td><td><code>git submodule update --init --recursive</code></td></tr>
+    <tr><td><code>git: 'lfs' 不是一个 git 命令</code></td><td>git-lfs 未安装</td><td><code>apt install git-lfs</code></td></tr>
+    <tr><td><code>Package 'gstreamer-1.0' not found</code></td><td>只在 capture=gstreamer 时出现</td><td>装开发包，或改用 <code>--no-capture</code></td></tr>
+    <tr><td>链接报 <code>std::unique_ptr</code> 相关崩溃 / ABI 怪异</td><td>用了 GCC 编 webrtc-sys</td><td>必须用 clang 21+（<span class="src">build.rs:531-547</span>）</td></tr>
+  </table>
+
+  <h2 id="s9">9. 附录</h2>
+  <h3>9.1 命令速查</h3>
+  <pre><code># 构建
+./build.sh release
+./build.sh debug-tests
+./build.sh release --bundle --prefix sdk-out/livekit-sdk
+./build.sh release --capture            # 全 capture 源（需 GStreamer）
+./build.sh clean
+./build.sh clean-all
+
+# 子模块 / LFS
+git submodule update --init --recursive
+git submodule status --recursive
+git lfs pull
+
+# 工具链
+source scripts/setup-linux-toolchain.sh
+echo "$CC $CXX $LIBCLANG_PATH"
+
+# 环境变量
+CMAKE_BUILD_PARALLEL_LEVEL=8 ./build.sh release
+CARGO_TARGET_DIR=/path ./build.sh release
+LK_CUSTOM_WEBRTC=/path/to/webrtc ./build.sh release</code></pre>
+
+  <h3>9.2 源码索引</h3>
+  <table>
+    <tr><th>主题</th><th>位置</th></tr>
+    <tr><td>构建入口与命令表</td><td class="src">build.sh:52-97,463-609</td></tr>
+    <tr><td>工具链选择与强制 clang 21</td><td class="src">scripts/setup-linux-toolchain.sh:17-21,66-140；build.sh:45-50</td></tr>
+    <tr><td>编译器一致性检查</td><td class="src">build.sh:214-233</td></tr>
+    <tr><td>configure / build / install</td><td class="src">build.sh:214-261,285-297,299-357</td></tr>
+    <tr><td>CMake preset 定义</td><td class="src">CMakePresets.json:1-69,135-182</td></tr>
+    <tr><td>vendored protobuf / protoc</td><td class="src">cmake/protobuf.cmake:110-228</td></tr>
+    <tr><td>FetchContent URL</td><td class="src">cmake/protobuf.cmake:115-126；cmake/spdlog.cmake:75-77；cmake/nlohmann_json.cmake:34-36；src/tests/CMakeLists.txt:10-12</td></tr>
+    <tr><td>CMake 调 cargo</td><td class="src">CMakeLists.txt:262,274-290,392-411；cmake/run_cargo.cmake:25-56</td></tr>
+    <tr><td>C++ 编译清单 / clang++</td><td class="src">client-sdk-rust/webrtc-sys/build.rs:65,67-102,401,531-547</td></tr>
+    <tr><td>预编译 libwebrtc 下载</td><td class="src">client-sdk-rust/webrtc-sys/build/src/lib.rs:79-116,199-230</td></tr>
+    <tr><td>两个 so 与 runpath</td><td class="src">docs/building.md:352-377；CMakeLists.txt:352-356,530,562+</td></tr>
+    <tr><td>官方依赖与安装说明</td><td class="src">docs/building.md:9-22,24-52,65-105,137-155</td></tr>
+    <tr><td>CI 依赖安装</td><td class="src">.github/actions/setup-sdk-deps/action.yml:33-76；.github/workflows/builds.yml:56-66,93-102</td></tr>
+    <tr><td>子模块与 LFS</td><td class="src">.gitmodules；client-sdk-rust/.gitmodules；.gitattributes:1</td></tr>
+    <tr><td>发布版本校验</td><td class="src">.github/workflows/rust-release-check.yml</td></tr>
+  </table>
+
+  <div class="footer">文档基于静态源码阅读 + 本机实测生成 · 未执行修复 / 未实际构建 · 图示为自绘 SVG，可离线查看 · MD 版为内容源</div>
+</main>
+</div>
+
+<script>
+/* ---------- 侧栏导航 ---------- */
+function buildNav(){
+  const nav = document.getElementById('nav');
+  const heads = document.querySelectorAll('#main h2, #main h3');
+  heads.forEach((h, i) => {
+    if (!h.id) h.id = 'sec-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent.replace(/^\d+(\.\d+)?\s*/, '');
+    if (h.tagName === 'H3') a.className = 'lv3';
+    a.dataset.target = h.id;
+    nav.appendChild(a);
+  });
+  const links = Array.from(nav.querySelectorAll('a'));
+  function highlight(){
+    let cur = null;
+    for (const h of heads) { if (h.getBoundingClientRect().top <= 120) cur = h.id; }
+    links.forEach(a => a.classList.toggle('active', a.dataset.target === cur));
+  }
+  window.addEventListener('scroll', highlight, {passive:true});
+  highlight();
+  return {links, heads};
+}
+
+/* ---------- 图的缩放 / 拖拽 / 大图 ---------- */
+function makePanZoom(root){
+  const vp = root.querySelector('.viewport');
+  const cv = root.querySelector('.canvas');
+  const svg = cv.querySelector('svg');
+  const zoomval = root.querySelector('.zoomval');
+  const W = +(svg.getAttribute('width') || 1000);
+  const H = +(svg.getAttribute('height') || 400);
+  const st = {scale:1, tx:0, ty:0};
+  function apply(){
+    cv.style.transform = 'translate(' + st.tx + 'px,' + st.ty + 'px) scale(' + st.scale + ')';
+    if (zoomval) zoomval.textContent = Math.round(st.scale * 100) + '%';
+  }
+  function fit(){
+    const r = vp.getBoundingClientRect();
+    st.scale = Math.min(r.width / W, r.height / H, 1);
+    st.tx = (r.width - W * st.scale) / 2;
+    st.ty = (r.height - H * st.scale) / 2;
+    apply();
+  }
+  function zoom(f, cx, cy){
+    const ns = Math.max(0.2, Math.min(4, st.scale * f));
+    const k = ns / st.scale;
+    st.tx = cx - (cx - st.tx) * k;
+    st.ty = cy - (cy - st.ty) * k;
+    st.scale = ns;
+    apply();
+  }
+  vp.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = vp.getBoundingClientRect();
+    zoom(e.deltaY < 0 ? 1.12 : 1/1.12, e.clientX - r.left, e.clientY - r.top);
+  }, {passive:false});
+  let drag = null;
+  vp.addEventListener('mousedown', e => {
+    drag = {x:e.clientX, y:e.clientY, tx:st.tx, ty:st.ty};
+    vp.classList.add('dragging');
+  });
+  window.addEventListener('mousemove', e => {
+    if (!drag) return;
+    st.tx = drag.tx + e.clientX - drag.x;
+    st.ty = drag.ty + e.clientY - drag.y;
+    apply();
+  });
+  window.addEventListener('mouseup', () => { drag = null; vp.classList.remove('dragging'); });
+  vp.addEventListener('dblclick', fit);
+  const bIn = root.querySelector('[data-act="in"]');
+  const bOut = root.querySelector('[data-act="out"]');
+  const bFit = root.querySelector('[data-act="fit"]');
+  const bReset = root.querySelector('[data-act="reset"]');
+  if (bIn) bIn.onclick = () => zoom(1.2, vp.clientWidth/2, vp.clientHeight/2);
+  if (bOut) bOut.onclick = () => zoom(1/1.2, vp.clientWidth/2, vp.clientHeight/2);
+  if (bReset) bReset.onclick = () => { st.scale=1; st.tx=0; st.ty=0; apply(); };
+  if (bFit) bFit.onclick = () => {
+    root.classList.toggle('expanded');
+    document.body.classList.toggle('has-expanded');
+    setTimeout(fit, 60);
+  };
+  const status = root.querySelector('.status');
+  if (status) status.textContent = '已渲染 · 可拖拽缩放 · 双击重置';
+  fit();
+  return {fit, state:st, collapse:function(){
+    root.classList.remove('expanded');
+    document.body.classList.remove('has-expanded');
+    setTimeout(fit, 60);
+  }};
+}
+
+document.getElementById('toggle').addEventListener('click', () => {
+  document.body.classList.toggle('collapsed');
+});
+
+(function(){
+  if (location.hash === '#collapsed') document.body.classList.add('collapsed');
+  buildNav();
+  const pz = {};
+  document.querySelectorAll('.diagram').forEach((root, i) => {
+    root.dataset.diagram = 'd' + i;
+    pz[root.dataset.diagram] = makePanZoom(root);
+  });
+  const backdrop = document.getElementById('diagram-backdrop');
+  function restoreAll(){
+    document.querySelectorAll('.diagram.expanded').forEach(el => {
+      const p = pz[el.dataset.diagram];
+      if (p && p.collapse) p.collapse();
+      else el.classList.remove('expanded');
+    });
+    document.body.classList.remove('has-expanded');
+  }
+  backdrop.addEventListener('click', restoreAll);
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') restoreAll(); });
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('.diagram:not(.expanded)').forEach(el => {
+      const p = pz[el.dataset.diagram]; if (p) p.fit();
+    });
+  });
+})();
+</script>
+</body>
+</html>
